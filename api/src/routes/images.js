@@ -1,35 +1,39 @@
-const {Router} = require('express');
-const express = require('express');
-const multer = require('multer');
-const {extname} = require('path');
+require("dotenv").config();
+const { Router } = require("express");
+const express = require("express");
+const cloudinary = require("cloudinary").v2;
+const multerImages = require("../helpers/multerImages.js");
 
-const imgroute=Router()
+const {
+//   SV_HOST,
+  CLOUDINARY_CLOUD_NAME,
+  CLOUDINARY_API_KEY,
+  CLOUDINARY_API_SECRET,
+} = process.env;
 
-const MIMETYPES = ["image/jpg", "image/jpeg", "image/png"];
+// Configuration
+cloudinary.config({
+  cloud_name: CLOUDINARY_CLOUD_NAME,
+  api_key: CLOUDINARY_API_KEY,
+  api_secret: CLOUDINARY_API_SECRET,
+});
 
-const multerImages=multer({
-    storage: multer.diskStorage({
-        destination: `${__dirname}/../images`,
-        filename: (req, file, cb)=> {
-            const ext = extname(file.originalname);
-            const filename=file.originalname.split(ext)[0]+`-${Date.now()}${ext}`
-            cb(null, filename)
-        }
-    }),
-    fileFilter: (req, file, cb) => {
-      if (!MIMETYPES.includes(file.mimetype)) cb(new Error(`Only ${MIMETYPES.join(", ")} are allowed`),false);
-      else cb(null, true);  
-    },
-    limits:{
-        fieldSize:50000000,
-    }
-})
+const imgroute = Router();
 
+// imgroute.post("/", multerImages.single("image"), async (req, res) => {
+imgroute.post("/",  async (req, res) => {
+  try {
+    // const imagen = await cloudinary.uploader.upload(req.file.path, {
+    const imagen = await cloudinary.uploader.upload(req.body.image, {
+      folder: "Pi-Dogs",
+    });
+    res.status(200).json({
+      msg: "image successfully changed",
+      url:imagen.secure_url,
+    });
+  } catch (error) {
+    res.status(400).json({ msg: error.message });
+  }
+});
 
-imgroute.post('/', multerImages.single("image") ,(req,res)=>{
-    res.status(200).json({msg:"imagen cambiada con exito", url:`http://localhost:3001/images/${req.file.filename}`})
-})
-imgroute.use("/",express.static(`${__dirname}/../images`))
-
-
-module.exports=imgroute;
+module.exports = imgroute;
